@@ -1,4 +1,4 @@
-### PERSONAL FINANCE TRACKER
+# PERSONAL FINANCE TRACKER
 
 A simple yet powerful **Console-Based Personal Finance Tracker** built in C++
 It tracks income, expenses, and in the future a budgets tracker - all in one using the terminal!
@@ -41,12 +41,12 @@ All built entirely with C++ with OOP, FileIO
 
 ## GETTING STARTED
 
-# PREREQUISITES
+### PREREQUISITES
 
 - **C++ Compiler**: `g++`, `clang++`, `MSVC`
 - **Terminal or command-line access**
 
-# BUILD INSTRUCTIONS
+### BUILD INSTRUCTIONS
 
 To compile and run the app:
 
