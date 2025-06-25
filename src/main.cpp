@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <iomanip>
-// #include <map>
 #include "../include/finance.hpp"
 
 #define APPNAME "Personal Finance Tracker"
