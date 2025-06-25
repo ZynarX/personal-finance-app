@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <string>
-#include <map>
 #include "../include/finance.hpp"
 
 Transaction::Transaction(double Amount, std::string Category, std::string Description, std::vector<int> Date)
