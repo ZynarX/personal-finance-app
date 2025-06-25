@@ -8,14 +8,25 @@
 
 #define APPNAME "Personal Finance Tracker"
 #define FILEPATH "data.txt"
+#define MIN_OPTION 1
+#define MAX_OPTION 6
 
 std::vector<Transaction> TRANSACTIONS;
-int TRANSACTIONS_LENGTH = 0;
+double BUDGET_GOAL;
+
+void ShowMenu();
+int GetOption(int min, int max);
+void HandleOption(int option);
 
 void LoadTransactions();
 void AddTransaction();
 void ViewAllTransactions();
 void SearchTransactions();
+
+void SearchByCategory();
+void SearchByDescription();
+void SearchByDate();
+
 void SetBudgetGoal();
 void GenerateMonthlyReport();
 void SaveTransactions();
@@ -26,6 +37,35 @@ int main()
 {
     LoadTransactions();
 
+    ShowMenu();
+
+    SaveTransactions();
+    
+    return 0;
+}
+
+void ShowMenu()
+{
+    int option;
+
+    do
+    {
+        try
+        {
+            option = GetOption(MIN_OPTION, MAX_OPTION);
+
+            HandleOption(option);
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+        
+    } while (option != 6);
+}
+
+int GetOption(int min, int max)
+{
     int option;
 
     do
@@ -35,47 +75,48 @@ int main()
             std::cout << "======== " << APPNAME << " ========\n";
             std::cout << "1. Add Transaction\n2. View All Transactions\n3. Search Transactions\n4. Set Budget Goal\n5. Generate Monthly Report\n6. Save & Exit\n\nChoose an option: ";
             std::cin >> option;
-
-            switch(option)
-            {
-                case 1:
-                    AddTransaction();
-                    break;
-                case 2:
-                    ViewAllTransactions();
-                    break;
-                case 3:
-                    SearchTransactions();
-                    break;
-                case 4:
-                    SetBudgetGoal();
-                    break;
-                case 5:
-                    GenerateMonthlyReport();
-                    break;
-                case 6:
-                    break;
-                default:
-                    std::cout << "Invalid option!\n\n";
-                    break;
-            }
         }
         catch(const std::exception& e)
         {
-            std::cerr << e.what() << '\n';
+            std::cout << "Invalid input!\n";
         }
-        
-    } while (option != 6);
-
-    SaveTransactions();
+    } while (option < min || option > max);
     
-    return 0;
+    return option;
+}
+
+void HandleOption(int option)
+{
+    switch(option)
+    {
+        case 1:
+            AddTransaction();
+            break;
+        case 2:
+            ViewAllTransactions();
+            break;
+        case 3:
+            SearchTransactions();
+            break;
+        case 4:
+            SetBudgetGoal();
+            break;
+        case 5:
+            GenerateMonthlyReport();
+            break;
+        case 6:
+            break;
+        default:
+            std::cout << "Invalid option!\n\n";
+            break;
+    }
 }
 
 void LoadTransactions()
 {
+    size_t min_size = 0;
+    size_t budget_index = 0;
     std::vector<std::string> data = {};
-    int data_length = 0;
 
     std::ifstream fileContent;
     fileContent.open(FILEPATH);
@@ -87,7 +128,6 @@ void LoadTransactions()
         while(std::getline(fileContent, curLine))
         {
             data.push_back(curLine);
-            data_length++;
         }
 
         fileContent.close();
@@ -97,114 +137,144 @@ void LoadTransactions()
         std::cerr << "Couldn't find file!\n";
     }
 
-    if(data_length > 0)
+    if(data.size() > min_size)
     {
-        for(std::string curData : data)
+        for(size_t i = 0; i < data.size(); i++)
         {
-            double curAmmount;
-            std::string curCategory = "";
-            std::string curDescription = "";
-            std::vector<int> curDate = {00, 00, 0000};
-
-            std::vector<std::string> splittedLine = Split(curData, '[');
-
-            std::vector<std::string> splittedDate = Split(splittedLine[3], '/');
-
-            try
+            if(i == budget_index)
             {
-                curAmmount = std::stod(splittedLine[0]);
-                curCategory = splittedLine[1];
-                curDescription = splittedLine[2];
+                BUDGET_GOAL = std::stod(data[i]);
+            }
+            else
+            {
+                std::string curData = data[i];
+                double curAmmount;
+                std::string curCategory = "";
+                std::string curDescription = "";
+                std::vector<int> curDate = {00, 00, 0000};
 
-                for(int i = 0; i < 3; i++)
+                std::vector<std::string> splittedLine = Split(curData, '[');
+
+                std::vector<std::string> splittedDate = Split(splittedLine[3], '/');
+
+                try
                 {
-                    curDate[i] = std::stoi(splittedDate[i]);
-                }
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n';
-            }
+                    curAmmount = std::stod(splittedLine[0]);
+                    curCategory = splittedLine[1];
+                    curDescription = splittedLine[2];
 
-            Transaction curTransaction(curAmmount, curCategory, curDescription, curDate);
-            TRANSACTIONS.push_back(curTransaction);
-            TRANSACTIONS_LENGTH++;
+                    for(int i = 0; i < 3; i++)
+                    {
+                        curDate[i] = std::stoi(splittedDate[i]);
+                    }
+                }
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
+                }
+
+                Transaction curTransaction(curAmmount, curCategory, curDescription, curDate);
+                TRANSACTIONS.push_back(curTransaction);
+            }
         }
     }
 }
 
 void AddTransaction()
 {
-    double amount = 0.00;
-    std::string category = "";
-    std::string description = "";
-    std::vector<int> date = {00, 00, 0000};
+    bool is_valid;
 
-    std::cout << "---- Add Transaction ----\n";
+    do
+    {
+        double amount = 0.00;
+        std::string category = "";
+        std::string description = "";
+        std::vector<int> date = {00, 00, 0000};
 
-    try
-    {
-        std::cout << "Transaction Amount (+/-): ";
-        std::cin >> amount;
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
+        std::cout << "---- Add Transaction ----\n";
 
-    std::cin.ignore();
-    std::cout << "Transaction Category: ";
-    std::getline(std::cin, category);
+        try
+        {
+            std::cout << "Transaction Amount (+/-): ";
+            std::cin >> amount;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
 
-    std::cin.ignore();
-    std::cout << "Transaction Description: ";
-    std::getline(std::cin, description);
+        do
+        {
+            std::cin.ignore();
+            std::cout << "Transaction Category: ";
+            std::getline(std::cin, category);
+        } while(category == "");
 
-    try
-    {
-        std::cout << "Transaction Date Month Day: ";
-        std::cin >> date[0];
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
+        do
+        {
+            std::cin.ignore();
+            std::cout << "Transaction Description: ";
+            std::getline(std::cin, description);
+        } while(description == "");
 
-    try
-    {
-        std::cout << "Transaction Date Month: ";
-        std::cin >> date[1];
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
+        do
+        {
+            try
+            {
+                std::cout << "Transaction Date Month Day: ";
+                std::cin >> date[0];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
+        } while(date[0] == 0);
 
-    try
-    {
-        std::cout << "Transaction Date Year: ";
-        std::cin >> date[2];
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
+        do
+        {
+            try
+            {
+                std::cout << "Transaction Date Month: ";
+                std::cin >> date[1];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
+        } while(date[1] == 0);
 
-    if(IsValidDate(date[0], date[1], date[2]))
-    {
-        Transaction newTransaction(amount, category, description, date);
-        TRANSACTIONS.push_back(newTransaction);
-        TRANSACTIONS_LENGTH++;
-    }
-    else
-    {
-        AddTransaction();
-    }
+        do
+        {
+            try
+            {
+                std::cout << "Transaction Date Year: ";
+                std::cin >> date[2];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
+        } while(date[2] == 0);
+
+        is_valid = IsValidDate(date[0], date[1], date[2]);
+
+        if(is_valid)
+        {
+            Transaction newTransaction(amount, category, description, date);
+            TRANSACTIONS.push_back(newTransaction);
+        }
+        else
+        {
+            std::cout << "Invalid date!\n";
+        }
+    } while(is_valid == false);
 }
 
 void ViewAllTransactions()
 {
-    if(TRANSACTIONS_LENGTH < 1)
+    size_t min_size = 1;
+
+    if(TRANSACTIONS.size() < min_size)
     {
         std::cout << "No transactions found!\n";
     }
@@ -263,6 +333,23 @@ void SearchTransactions()
     
     if (option == 1)
     {
+        SearchByCategory();
+    }
+    else if (option == 2)
+    {
+        SearchByDescription();
+    }
+    else if(option == 3)
+    {
+        SearchByDate();
+    }
+
+}
+
+void SearchByCategory()
+{
+    try
+    {
         std::string category;
 
         std::cout << "--- Transaction Category ---\n";
@@ -288,7 +375,15 @@ void SearchTransactions()
             std::cout << "No matching transactions found!\n";
         }
     }
-    else if (option == 2)
+    catch(const std::exception& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+}
+
+void SearchByDescription()
+{
+    try
     {
         std::string description;
 
@@ -315,7 +410,15 @@ void SearchTransactions()
             std::cout << "No matching transactions found!\n";
         }
     }
-    else if(option == 3)
+    catch(const std::exception& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+}
+
+void SearchByDate()
+{
+    try
     {
         std::vector<std::string> titles = {"Month Day: ", "Month: ", "Year: "};
         std::vector<int> date = {00, 00, 0000};
@@ -347,12 +450,24 @@ void SearchTransactions()
             std::cout << "No matching transactions found!\n";
         }
     }
-
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
 }
 
 void SetBudgetGoal()
 {
-    // Will be done later
+    try
+    {
+        std::cout << "Enter your monthly budget goal: ";
+        std::cin >> BUDGET_GOAL;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    
 }
 
 void GenerateMonthlyReport()
@@ -362,27 +477,36 @@ void GenerateMonthlyReport()
 
 void SaveTransactions()
 {
-    std::ofstream fileContent;
-    fileContent.open(FILEPATH, std::ios::out | std::ios::trunc);
-
-    if(fileContent.is_open())
+    try
     {
-        for(Transaction& transaction : TRANSACTIONS)
+        std::ofstream fileContent;
+        fileContent.open(FILEPATH, std::ios::out | std::ios::trunc);
+
+        if(fileContent.is_open())
         {
-            fileContent << "" << transaction.Amount() << "[" << transaction.Category() << "[" << transaction.Description() << "[" << transaction.Date()[0] << "/" << transaction.Date()[1] << "/" << transaction.Date()[2] << "\n";
-        }
+            fileContent << BUDGET_GOAL << '\n';
 
-        fileContent.close();
+            for(Transaction& transaction : TRANSACTIONS)
+            {
+                fileContent << "" << transaction.Amount() << "[" << transaction.Category() << "[" << transaction.Description() << "[" << transaction.Date()[0] << "/" << transaction.Date()[1] << "/" << transaction.Date()[2] << '\n';
+            }
+
+            fileContent.close();
+        }
+        else
+        {
+            std::cerr << "Couldn't save data!\n";
+        }
     }
-    else
+    catch(const std::exception& e)
     {
-        std::cerr << "Couldn't save data!\n";
+        std::cerr << e.what() << '\n';
     }
 }
 
 bool IsValidDate(int day, int month, int year)
 {
-    if(year < 0)
+    if(year < 0 || year > 2100)
     {
         return false;
     }
@@ -394,131 +518,39 @@ bool IsValidDate(int day, int month, int year)
         }
         else
         {
-            switch (month)
+            int daysInMoth[] = {
+                0,
+                31,
+                29,
+                31,
+                30,
+                31,
+                30,
+                31,
+                31,
+                30,
+                31,
+                30,
+                31
+            };
+            
+            if((year % 400 == 0 && year % 100 != 0) || (year % 400 == 0))
             {
-                case 1:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 2:
-                    if(day > 0 && day <= 28)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 3:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 4:
-                    if(day > 0 && day <= 30)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 5:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 6:
-                    if(day > 0 && day <= 30)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 7:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 8:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 9:
-                    if(day > 0 && day <= 30)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 10:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 11:
-                    if(day > 0 && day <= 30)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                case 12:
-                    if(day > 0 && day <= 31)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                    break;
-                default:
-                    return false;
-                    break;
+                
+                daysInMoth[2] = 29;
+            }
+            else
+            {
+                daysInMoth[2] = 29;
+            }
+
+            if(day < 1 || day > daysInMoth[month])
+            {
+                return false;
+            }
+            else
+            {
+                return true;
             }
         }
     }
