@@ -50,5 +50,5 @@ All built entirely with C++ with OOP, FileIO
 
 To compile and run the app:
 
-`g++ src/main.cpp include/finance.hpp include/finance.cpp -o finance`
+`g++ src/main.cpp src/finance.cpp -o finance`
 `./finance`
